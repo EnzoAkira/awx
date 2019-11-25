@@ -87,6 +87,7 @@ awx/awx_test.sqlite3-journal
 # Editors
 *.sw[poj]
 *~
+.vscode*
 
 # Vagrant
 /Vagrantfile
