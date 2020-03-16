@@ -58,6 +58,7 @@ describe('<Template />', () => {
     const wrapper = mountWithContexts(
       <Template setBreadcrumb={() => {}} me={mockMe} />
     );
+
     const tabs = await waitForElement(
       wrapper,
       '.pf-c-tabs__item',

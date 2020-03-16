@@ -8,6 +8,25 @@ inside the folder `lib/ansible/modules/web_infrastructure/ansible_tower`
 as well as other folders for the inventory plugin, module utils, and
 doc fragment.
 
+## Building and Installing
+
+This collection templates the `galaxy.yml` file it uses.
+Run `make build_collection` from the root folder of the AWX source tree.
+This will create the `tar.gz` file inside the `awx_collection` folder
+with the current AWX version, for example: `awx_collection/awx-awx-9.2.0.tar.gz`.
+
+Installing the `tar.gz` involves no special instructions.
+
+## Running
+
+Modules in this collection may have any of the following python requirements:
+
+ - the official [AWX CLI](https://docs.ansible.com/ansible-tower/latest/html/towercli/index.html)
+ - the deprecated `tower-cli` [PyPI](https://pypi.org/project/ansible-tower-cli/)
+ - no requirements
+
+See requirements in the `DOCUMENTATION` string specific to each module.
+
 ## Release and Upgrade Notes
 
 The release 7.0.0 of the `awx.awx` collection is intended to be identical
@@ -16,28 +35,23 @@ have it function as a collection.
 
 The following notes are changes that may require changes to playbooks:
 
- - Specifying `inputs` or `injectors` as strings in the
-   `tower_credential_type` module is no longer supported. Provide them as dictionaries instead.
+
  - When a project is created, it will wait for the update/sync to finish by default; this can be turned off with the `wait` parameter, if desired.
  - Creating a "scan" type job template is no longer supported.
- - `extra_vars` in the `tower_job_launch` module worked with a list previously, but is now configured to work solely in a `dict` format.
- - When the `extra_vars` parameter is used with the `tower_job_launch` module, the Job Template launch will fail unless `add_extra_vars` or `survey_enabled` is explicitly set to `True` on the Job Template.
+ - Type changes of variable fields
+   - `extra_vars` in the `tower_job_launch` module worked with a list previously, but is now configured to work solely in a `dict` format.
+   - `extra_vars` in the `tower_workflow_job_template` module worked with a string previously but now expects a dict.
+   - When the `extra_vars` parameter is used with the `tower_job_launch` module, the Job Template launch will fail unless `add_extra_vars` or `survey_enabled` is explicitly set to `True` on the Job Template.
+   - The `variables` parameter in the `tower_group`, `tower_host` and `tower_inventory` modules are now in `dict` format and no longer supports the use of the `C(@)` syntax (for an external `vars` file).
+ - Type changes of other types of fields
+   - Specifying `inputs` or `injectors` as strings in the
+     `tower_credential_type` module is no longer supported. Provide them as dictionaries instead.
+   - Specifying `schema` as in the `tower_workflow_job_template` module is no longer supported. Use a list of dicts instead.
  - `tower_group` used to also service inventory sources, but this functionality has been removed from this module; use `tower_inventory_source` instead.
  - Specified `tower_config` file used to handle `k=v` pairs on a single line; this is no longer supported. Please use a file formatted as `yaml`, `json` or `ini` only.
- - The `variables` parameter in the `tower_group`, `tower_host` and `tower_inventory` modules are now in `dict` format and no longer supports the use of the `C(@)` syntax (for an external `vars` file).
  - Some return values (e.g., `credential_type`) have been removed. Use of `id` is recommended.
 
-## Running
-
-To use this collection, the "old" `tower-cli` needs to be installed
-in the virtual environment where the collection runs.
-You can install it from [PyPI](https://pypi.org/project/ansible-tower-cli/).
-
-To use this collection in AWX, you should create a custom virtual environment into which to install the requirements. NOTE: running locally, you will also need
-to set the job template `extra_vars` to include `ansible_python_interpreter`
-to be the Python in that virtual environment.
-
-## Running Tests
+## Running Unit Tests
 
 Tests to verify compatibility with the most recent AWX code are
 in `awx_collection/test/awx`. These tests require that Python packages
@@ -71,11 +85,29 @@ pip install -e .
 PYTHONPATH=awx_collection:$PYTHONPATH py.test awx_collection/test/awx/
 ```
 
-## Building
+## Running Integration Tests
 
-The build target `make build_collection` will template out a `galaxy.yml` file
-with automatic detection of the current AWX version. Then it builds the
-collection with the `ansible-galaxy` CLI.
+The integration tests require a virtualenv with `ansible` >= 2.9 and `tower_cli`.
+The collection must first be installed, which can be done using `make install_collection`.
+You also need a configuration file at `~/.tower_cli.cfg` or
+`/etc/tower/tower_cli.cfg` with the credentials for accessing tower. This can
+be populated using `tower-cli`:
+
+```
+tower-cli config host $HOST
+tower-cli config username $USERNAME
+tower-cli config password $PASSWORD
+# This tells the tower-cli not to veriffy the ssl certs in the tower, if your tower has good certs you should leave this to true
+tower-cli config verify_ssl false
+```
+
+Finally you can run the tests:
+
+```
+# ansible-test must be run from the directory in which the collection is installed
+cd ~/.ansible/collections/ansible_collections/awx/awx/
+ansible-test integration
+```
 
 ## Licensing
 
