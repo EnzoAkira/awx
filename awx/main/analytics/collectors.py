@@ -31,7 +31,7 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 '''
 
 
-@register('config', '1.0')
+@register('config', '1.1')
 def config(since):
     license_info = get_license(show_key=False)
     install_type = 'traditional'
@@ -53,6 +53,7 @@ def config(since):
         'ansible_version': get_ansible_version(),
         'license_type': license_info.get('license_type', 'UNLICENSED'),
         'free_instances': license_info.get('free_instances', 0),
+        'total_licensed_instances': license_info.get('instance_count', 0),
         'license_expiry': license_info.get('time_remaining', 0),
         'pendo_tracking': settings.PENDO_TRACKING_STATE,
         'authentication_backends': settings.AUTHENTICATION_BACKENDS,

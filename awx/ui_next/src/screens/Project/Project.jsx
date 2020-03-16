@@ -9,10 +9,10 @@ import RoutedTabs from '@components/RoutedTabs';
 import ContentError from '@components/ContentError';
 import NotificationList from '@components/NotificationList';
 import { ResourceAccessList } from '@components/ResourceAccessList';
+import { Schedules } from '@components/Schedule';
 import ProjectDetail from './ProjectDetail';
 import ProjectEdit from './ProjectEdit';
 import ProjectJobTemplatesList from './ProjectJobTemplatesList';
-import ProjectSchedules from './ProjectSchedules';
 import { OrganizationsAPI, ProjectsAPI } from '@api';
 
 class Project extends Component {
@@ -25,11 +25,11 @@ class Project extends Component {
       contentError: null,
       isInitialized: false,
       isNotifAdmin: false,
-      isAuditorOfThisOrg: false,
-      isAdminOfThisOrg: false,
     };
     this.loadProject = this.loadProject.bind(this);
     this.loadProjectAndRoles = this.loadProjectAndRoles.bind(this);
+    this.loadSchedules = this.loadSchedules.bind(this);
+    this.loadScheduleOptions = this.loadScheduleOptions.bind(this);
   }
 
   async componentDidMount() {
@@ -63,22 +63,10 @@ class Project extends Component {
           role_level: 'notification_admin_role',
         }),
       ]);
-      const [auditorRes, adminRes] = await Promise.all([
-        OrganizationsAPI.read({
-          id: data.organization,
-          role_level: 'auditor_role',
-        }),
-        OrganizationsAPI.read({
-          id: data.organization,
-          role_level: 'admin_role',
-        }),
-      ]);
       setBreadcrumb(data);
       this.setState({
         project: data,
         isNotifAdmin: notifAdminRes.data.results.length > 0,
-        isAuditorOfThisOrg: auditorRes.data.results.length > 0,
-        isAdminOfThisOrg: adminRes.data.results.length > 0,
       });
     } catch (err) {
       this.setState({ contentError: err });
@@ -103,8 +91,18 @@ class Project extends Component {
     }
   }
 
+  loadScheduleOptions() {
+    const { project } = this.state;
+    return ProjectsAPI.readScheduleOptions(project.id);
+  }
+
+  loadSchedules(params) {
+    const { project } = this.state;
+    return ProjectsAPI.readSchedules(project.id, params);
+  }
+
   render() {
-    const { location, match, me, i18n } = this.props;
+    const { location, match, me, i18n, setBreadcrumb } = this.props;
 
     const {
       project,
@@ -112,15 +110,9 @@ class Project extends Component {
       hasContentLoading,
       isInitialized,
       isNotifAdmin,
-      isAuditorOfThisOrg,
-      isAdminOfThisOrg,
     } = this.state;
-
-    const canSeeNotificationsTab =
-      me.is_system_auditor || isNotifAdmin || isAuditorOfThisOrg;
-    const canToggleNotifications =
-      isNotifAdmin &&
-      (me.is_system_auditor || isAuditorOfThisOrg || isAdminOfThisOrg);
+    const canSeeNotificationsTab = me.is_system_auditor || isNotifAdmin;
+    const canToggleNotifications = isNotifAdmin;
 
     const tabsArray = [
       { name: i18n._(t`Details`), link: `${match.url}/details` },
@@ -134,16 +126,17 @@ class Project extends Component {
       });
     }
 
-    tabsArray.push(
-      {
-        name: i18n._(t`Job Templates`),
-        link: `${match.url}/job_templates`,
-      },
-      {
+    tabsArray.push({
+      name: i18n._(t`Job Templates`),
+      link: `${match.url}/job_templates`,
+    });
+
+    if (project?.scm_type) {
+      tabsArray.push({
         name: i18n._(t`Schedules`),
         link: `${match.url}/schedules`,
-      }
-    );
+      });
+    }
 
     tabsArray.forEach((tab, n) => {
       tab.id = n;
@@ -162,7 +155,10 @@ class Project extends Component {
       cardHeader = null;
     }
 
-    if (location.pathname.endsWith('edit')) {
+    if (
+      location.pathname.endsWith('edit') ||
+      location.pathname.includes('schedules/')
+    ) {
       cardHeader = null;
     }
 
@@ -230,10 +226,19 @@ class Project extends Component {
                 <ProjectJobTemplatesList id={Number(match.params.id)} />
               )}
             />
-            <Route
-              path="/projects/:id/schedules"
-              render={() => <ProjectSchedules id={Number(match.params.id)} />}
-            />
+            {project?.scm_type && project.scm_type !== '' && (
+              <Route
+                path="/projects/:id/schedules"
+                render={() => (
+                  <Schedules
+                    setBreadcrumb={setBreadcrumb}
+                    unifiedJobTemplate={project}
+                    loadSchedules={this.loadSchedules}
+                    loadScheduleOptions={this.loadScheduleOptions}
+                  />
+                )}
+              />
+            )}
             <Route
               key="not-found"
               path="*"

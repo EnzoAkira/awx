@@ -749,6 +749,8 @@ class WorkflowApproval(UnifiedJob, JobNotificationMixin):
 
     def signal_start(self, **kwargs):
         can_start = super(WorkflowApproval, self).signal_start(**kwargs)
+        self.started = self.created
+        self.save(update_fields=['started'])
         self.send_approval_notification('running')
         return can_start
 
